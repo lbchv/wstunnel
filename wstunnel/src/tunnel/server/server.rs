@@ -135,7 +135,6 @@ impl<E: crate::TokioExecutorRef> WsServer<E> {
         info!("Tunnel accepted due to matched restriction: {}", restriction.name);
 
         let req_protocol = remote.protocol.clone();
-        let inject_cookie = req_protocol.is_dynamic_reverse_tunnel();
         let tunnel = self
             .exec_tunnel(restriction, remote, client_addr)
             .await
@@ -146,6 +145,8 @@ impl<E: crate::TokioExecutorRef> WsServer<E> {
 
         let (remote_addr, local_rx, local_tx) = tunnel;
         info!("connected to {:?} {}:{}", req_protocol, remote_addr.host, remote_addr.port);
+        let inject_cookie =
+            req_protocol.is_dynamic_reverse_tunnel() || remote_addr.protocol.needs_cookie_for_proxy_protocol();
         Ok((remote_addr, local_rx, local_tx, inject_cookie))
     }
 
@@ -196,14 +197,22 @@ impl<E: crate::TokioExecutorRef> WsServer<E> {
 
                 Ok((remote, Box::pin(rx), Box::pin(tx)))
             }
-            LocalProtocol::ReverseTcp => {
+            LocalProtocol::ReverseTcp { proxy_protocol } => {
                 static SERVERS: LazyLock<ReverseTunnelServer<TcpTunnelListener>> =
                     LazyLock::new(ReverseTunnelServer::new);
 
                 let remote_port = find_mapped_port(remote.port, restriction);
                 let local_srv = (remote.host, remote_port);
                 let bind = try_to_sock_addr(local_srv.clone())?;
-                let listening_server = async { TcpTunnelListener::new(bind, local_srv.clone(), false).await };
+
+                // Use destination address from JWT if available (for reverse tunnels)
+                let dest_addr = if let (Some(dest_host), Some(dest_port)) = (&remote.dest_host, remote.dest_port) {
+                    (dest_host.clone(), dest_port)
+                } else {
+                    local_srv.clone()
+                };
+
+                let listening_server = async move { TcpTunnelListener::new(bind, dest_addr, proxy_protocol).await };
                 let ((local_rx, local_tx), remote) = SERVERS
                     .run_listening_server(
                         &self.executor,

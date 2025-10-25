@@ -46,6 +46,10 @@ impl Stream for UnixTunnelListener {
                         },
                         host,
                         port,
+                        src_host: None,
+                        dest_host: None,
+                        src_port: None,
+                        dest_port: None,
                     },
                 )))
             }

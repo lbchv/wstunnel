@@ -204,6 +204,10 @@ impl<E: TokioExecutorRef> WsClient<E> {
                     protocol: jwt.claims.p,
                     host: Host::parse(&jwt.claims.r).unwrap_or_else(|_| Host::Domain(String::new())),
                     port: jwt.claims.rp,
+                    src_host: jwt.claims.sh.as_ref().and_then(|h| Host::parse(h).ok()),
+                    src_port: jwt.claims.sp,
+                    dest_host: jwt.claims.dh.as_ref().and_then(|h| Host::parse(h).ok()),
+                    dest_port: jwt.claims.dp,
                 });
 
             let (local_rx, local_tx) = match connector.connect(&remote).instrument(span.clone()).await {

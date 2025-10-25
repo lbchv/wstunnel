@@ -163,7 +163,7 @@ impl From<&LocalProtocol> for ReverseTunnelConfigProtocol {
             | LocalProtocol::TProxyUdp { .. }
             | LocalProtocol::HttpProxy { .. }
             | LocalProtocol::Unix { .. } => Self::Unknown,
-            LocalProtocol::ReverseTcp => Self::Tcp,
+            LocalProtocol::ReverseTcp { .. } => Self::Tcp,
             LocalProtocol::ReverseUdp { .. } => Self::Udp,
             LocalProtocol::ReverseSocks5 { .. } => Self::Socks5,
             LocalProtocol::ReverseUnix { .. } => Self::Unix,
@@ -174,7 +174,7 @@ impl From<&LocalProtocol> for ReverseTunnelConfigProtocol {
 impl From<&LocalProtocol> for TunnelConfigProtocol {
     fn from(value: &LocalProtocol) -> Self {
         match value {
-            LocalProtocol::ReverseTcp
+            LocalProtocol::ReverseTcp { .. }
             | LocalProtocol::ReverseUdp { .. }
             | LocalProtocol::ReverseSocks5 { .. }
             | LocalProtocol::ReverseUnix { .. }

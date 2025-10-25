@@ -47,6 +47,10 @@ impl Stream for TproxyTcpTunnelListener {
                         },
                         host,
                         port,
+                        src_host: None,
+                        dest_host: None,
+                        src_port: None,
+                        dest_port: None,
                     },
                 )))
             }
@@ -96,6 +100,10 @@ where
                         protocol: LocalProtocol::Udp { timeout: this.timeout },
                         host,
                         port,
+                        src_host: None,
+                        dest_host: None,
+                        src_port: None,
+                        dest_port: None,
                     },
                 )))
             }

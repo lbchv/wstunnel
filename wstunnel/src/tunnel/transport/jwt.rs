@@ -31,6 +31,14 @@ pub struct JwtTunnelConfig {
     pub p: LocalProtocol, // protocol to use
     pub r: String,        // remote host
     pub rp: u16,          // remote port
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sh: Option<String>, // source host (for proxy protocol)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sp: Option<u16>, // source port (for proxy protocol)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dh: Option<String>, // destination host (for reverse tunnels)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dp: Option<u16>, // destination port (for reverse tunnels)
 }
 
 impl JwtTunnelConfig {
@@ -40,7 +48,7 @@ impl JwtTunnelConfig {
             p: match dest.protocol {
                 LocalProtocol::Tcp { .. } => dest.protocol.clone(),
                 LocalProtocol::Udp { .. } => dest.protocol.clone(),
-                LocalProtocol::ReverseTcp => dest.protocol.clone(),
+                LocalProtocol::ReverseTcp { .. } => dest.protocol.clone(),
                 LocalProtocol::ReverseUdp { .. } => dest.protocol.clone(),
                 LocalProtocol::ReverseSocks5 { .. } => dest.protocol.clone(),
                 LocalProtocol::ReverseUnix { .. } => dest.protocol.clone(),
@@ -54,6 +62,10 @@ impl JwtTunnelConfig {
             },
             r: dest.host.to_string(),
             rp: dest.port,
+            sh: dest.src_host.as_ref().map(|h| h.to_string()),
+            sp: dest.src_port,
+            dh: dest.dest_host.as_ref().map(|h| h.to_string()),
+            dp: dest.dest_port,
         }
     }
 }
@@ -77,6 +89,10 @@ impl TryFrom<JwtTunnelConfig> for RemoteAddr {
             protocol: jwt.p,
             host: Host::parse(&jwt.r)?,
             port: jwt.rp,
+            src_host: jwt.sh.as_ref().and_then(|h| Host::parse(h).ok()),
+            src_port: jwt.sp,
+            dest_host: jwt.dh.as_ref().and_then(|h| Host::parse(h).ok()),
+            dest_port: jwt.dp,
         })
     }
 }

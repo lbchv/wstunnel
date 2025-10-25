@@ -43,7 +43,18 @@ impl Stream for HttpProxyTunnelListener {
                 let protocol = LocalProtocol::Tcp {
                     proxy_protocol: this.proxy_protocol,
                 };
-                Some(anyhow::Ok((stream.into_split(), RemoteAddr { protocol, host, port })))
+                Some(anyhow::Ok((
+                    stream.into_split(),
+                    RemoteAddr {
+                        protocol,
+                        host,
+                        port,
+                        src_host: None,
+                        src_port: None,
+                        dest_host: None,
+                        dest_port: None,
+                    },
+                )))
             }
             Some(Err(err)) => Some(Err(err)),
             None => None,

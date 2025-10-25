@@ -134,6 +134,9 @@ Options:
           Listen on remote and forwards traffic from local. Can be specified multiple times. Only tcp is supported
           examples:
           'tcp://1212:google.com:443'      =>     listen on server for incoming tcp cnx on port 1212 and forward to google.com on port 443 from local machine
+          'tcp://2:n.lan:4?proxy_protocol' =>     listen on server for incoming tcp cnx on port 2 and forward to n.lan on port 4
+                                                  Send a proxy protocol header v2 when establishing connection to n.lan
+                                                  
           'udp://1212:1.1.1.1:53'          =>     listen on server for incoming udp on port 1212 and forward to cloudflare dns 1.1.1.1 on port 53 from local machine
           'socks5://[::1]:1212'            =>     listen on server for incoming socks5 request on port 1212 and forward dynamically request from local machine
           'http://[::1]:1212'              =>     listen on server for incoming http proxy request on port 1212 and forward dynamically request from local machine (login/password is supported)

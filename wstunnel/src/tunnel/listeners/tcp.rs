@@ -38,6 +38,17 @@ impl Stream for TcpTunnelListener {
         let ret = match ret {
             Some(Ok(strean)) => {
                 let (host, port) = this.dest.clone();
+                let peer_addr = strean.peer_addr().ok();
+                let (src_host, src_port) = peer_addr
+                    .map(|addr| {
+                        let host = match addr.ip() {
+                            std::net::IpAddr::V4(ip) => url::Host::Ipv4(ip),
+                            std::net::IpAddr::V6(ip) => url::Host::Ipv6(ip),
+                        };
+                        (Some(host), Some(addr.port()))
+                    })
+                    .unwrap_or((None, None));
+
                 Some(anyhow::Ok((
                     strean.into_split(),
                     RemoteAddr {
@@ -46,6 +57,10 @@ impl Stream for TcpTunnelListener {
                         },
                         host,
                         port,
+                        src_host,
+                        src_port,
+                        dest_host: None,
+                        dest_port: None,
                     },
                 )))
             }

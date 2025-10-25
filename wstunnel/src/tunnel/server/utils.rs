@@ -205,7 +205,7 @@ pub(super) fn validate_tunnel<'a>(
 
 pub(super) fn inject_cookie(response: &mut http::Response<impl Body>, remote_addr: &RemoteAddr) -> Result<(), ()> {
     let Ok(header_val) = HeaderValue::from_str(&tunnel_to_jwt_token(Uuid::from_u128(0), remote_addr)) else {
-        error!("Bad header value for reverse socks5: {} {}", remote_addr.host, remote_addr.port);
+        error!("Bad header value for reverse tunnel: {} {}", remote_addr.host, remote_addr.port);
         return Err(());
     };
     response.headers_mut().insert(COOKIE, header_val);
@@ -255,6 +255,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert_eq!(
             validate_tunnel(&remote, "/doesnt/matter", None, &restrictions)
@@ -264,9 +268,13 @@ mod tests {
         );
 
         let remote = RemoteAddr {
-            protocol: LocalProtocol::ReverseTcp,
+            protocol: LocalProtocol::ReverseTcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert_eq!(
             validate_tunnel(&remote, "/doesnt/matter", None, &restrictions)
@@ -279,6 +287,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 81,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(validate_tunnel(&remote, "/doesnt/matter", None, &restrictions).is_none());
 
@@ -286,6 +298,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 1, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(validate_tunnel(&remote, "/doesnt/matter", None, &restrictions).is_none());
 
@@ -293,6 +309,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Domain("example.com".into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert_eq!(
             validate_tunnel(&remote, "/doesnt/matter", None, &restrictions)
@@ -305,6 +325,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Domain("not.com".into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(validate_tunnel(&remote, "/doesnt/matter", None, &restrictions).is_none());
 
@@ -312,6 +336,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv6(Ipv6Addr::LOCALHOST),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(validate_tunnel(&remote, "/doesnt/matter", None, &restrictions).is_none());
     }
@@ -337,6 +365,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert_eq!(
             validate_tunnel(&remote, "/doesnt/matter", Some("Bearer the-bearer-token"), &restrictions)
@@ -358,18 +390,26 @@ mod tests {
         };
 
         let remote = RemoteAddr {
-            protocol: LocalProtocol::ReverseTcp,
+            protocol: LocalProtocol::ReverseTcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(config.is_allowed(&remote));
         assert!(AllowConfig::from(config.clone()).is_allowed(&remote));
 
         // another ip on the same subnet
         let remote = RemoteAddr {
-            protocol: LocalProtocol::ReverseTcp,
+            protocol: LocalProtocol::ReverseTcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 1, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(config.is_allowed(&remote));
         assert!(AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -386,27 +426,39 @@ mod tests {
 
         // wrong IP
         let remote = RemoteAddr {
-            protocol: LocalProtocol::ReverseTcp,
+            protocol: LocalProtocol::ReverseTcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 1, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
 
         // ipv6
         let remote = RemoteAddr {
-            protocol: LocalProtocol::ReverseTcp,
+            protocol: LocalProtocol::ReverseTcp { proxy_protocol: false },
             host: Host::Ipv6(Ipv6Addr::LOCALHOST),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
 
         // wrong port
         let remote = RemoteAddr {
-            protocol: LocalProtocol::ReverseTcp,
+            protocol: LocalProtocol::ReverseTcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 81,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -416,6 +468,10 @@ mod tests {
             protocol: LocalProtocol::ReverseUdp { timeout: None },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -425,15 +481,23 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
 
         // host is domain
         let remote = RemoteAddr {
-            protocol: LocalProtocol::ReverseTcp,
+            protocol: LocalProtocol::ReverseTcp { proxy_protocol: false },
             host: Host::Domain("example.com".into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -452,6 +516,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(config.is_allowed(&remote));
         assert!(AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -461,6 +529,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 1, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(config.is_allowed(&remote));
         assert!(AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -470,6 +542,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Domain("example.com".into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(config.is_allowed(&remote));
         assert!(AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -489,6 +565,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 1, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -498,6 +578,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv6(Ipv6Addr::LOCALHOST),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -507,15 +591,23 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 81,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
 
         // wrong protocol - remote
         let remote = RemoteAddr {
-            protocol: LocalProtocol::ReverseTcp,
+            protocol: LocalProtocol::ReverseTcp { proxy_protocol: false },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -525,6 +617,10 @@ mod tests {
             protocol: LocalProtocol::Udp { timeout: None },
             host: Host::Ipv4([127, 0, 0, 1].into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));
@@ -534,6 +630,10 @@ mod tests {
             protocol: LocalProtocol::Tcp { proxy_protocol: false },
             host: Host::Domain("not.com".into()),
             port: 80,
+            src_host: None,
+            dest_host: None,
+            src_port: None,
+            dest_port: None,
         };
         assert!(!config.is_allowed(&remote));
         assert!(!AllowConfig::from(config.clone()).is_allowed(&remote));

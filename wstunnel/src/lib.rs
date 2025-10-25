@@ -202,7 +202,8 @@ async fn create_client_tunnels(
     for tunnel in remote_to_local.into_iter() {
         let client = client.clone();
         match &tunnel.local_protocol {
-            LocalProtocol::ReverseTcp => {
+            LocalProtocol::ReverseTcp { proxy_protocol } => {
+                let proxy_protocol = *proxy_protocol;
                 spawn_tunnel! {
                     let cfg = client.config.clone();
                     let tcp_connector = TcpTunnelConnector::new(
@@ -214,9 +215,13 @@ async fn create_client_tunnels(
                     );
                     let (host, port) = to_host_port(tunnel.local);
                     let remote = RemoteAddr {
-                        protocol: LocalProtocol::ReverseTcp,
+                        protocol: LocalProtocol::ReverseTcp { proxy_protocol },
                         host,
                         port,
+                        src_host: None,
+                        dest_host: Some(tunnel.remote.0.clone()),
+                        src_port: None,
+                        dest_port: Some(tunnel.remote.1),
                     };
                     if let Err(err) = client.run_reverse_tunnel(remote, tcp_connector).await {
                         error!("{:?}", err);
@@ -232,6 +237,10 @@ async fn create_client_tunnels(
                         protocol: LocalProtocol::ReverseUdp { timeout },
                         host,
                         port,
+                        src_host: None,
+                        dest_host: None,
+                        src_port: None,
+                        dest_port: None,
                     };
                     let udp_connector = UdpTunnelConnector::new(
                         &tunnel.remote.0,
@@ -256,6 +265,10 @@ async fn create_client_tunnels(
                         protocol: LocalProtocol::ReverseSocks5 { timeout, credentials },
                         host,
                         port,
+                        src_host: None,
+                        dest_host: None,
+                        src_port: None,
+                        dest_port: None,
                     };
                     let socks_connector =
                         Socks5TunnelConnector::new(cfg.socket_so_mark, cfg.timeout_connect, &cfg.dns_resolver);
@@ -275,6 +288,10 @@ async fn create_client_tunnels(
                         protocol: LocalProtocol::ReverseHttpProxy { timeout, credentials },
                         host,
                         port,
+                        src_host: None,
+                        dest_host: None,
+                        src_port: None,
+                        dest_port: None,
                     };
                     let tcp_connector = TcpTunnelConnector::new(
                         &tunnel.remote.0,
@@ -307,6 +324,10 @@ async fn create_client_tunnels(
                         protocol: LocalProtocol::ReverseUnix { path },
                         host,
                         port,
+                        src_host: None,
+                        dest_host: None,
+                        src_port: None,
+                        dest_port: None,
                     };
                     if let Err(err) = client.run_reverse_tunnel(remote, tcp_connector).await {
                         error!("{:?}", err);
@@ -423,7 +444,7 @@ async fn create_client_tunnels(
                 tokio::time::sleep(Duration::from_secs(1)).await;
                 std::process::exit(0);
             }
-            LocalProtocol::ReverseTcp => {}
+            LocalProtocol::ReverseTcp { .. } => {}
             LocalProtocol::ReverseUdp { .. } => {}
             LocalProtocol::ReverseSocks5 { .. } => {}
             LocalProtocol::ReverseUnix { .. } => {}

@@ -35,7 +35,18 @@ impl Stream for Socks5TunnelListener {
         let ret = match ret {
             Some(Ok((stream, (host, port)))) => {
                 let protocol = stream.local_protocol();
-                Some(anyhow::Ok((stream.into_split(), RemoteAddr { protocol, host, port })))
+                Some(anyhow::Ok((
+                    stream.into_split(),
+                    RemoteAddr {
+                        protocol,
+                        host,
+                        port,
+                        src_host: None,
+                        src_port: None,
+                        dest_host: None,
+                        dest_port: None,
+                    },
+                )))
             }
             Some(Err(err)) => Some(Err(err)),
             None => None,

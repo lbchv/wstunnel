@@ -652,7 +652,7 @@ mod parsers {
     pub fn parse_reverse_tunnel_arg(arg: &str) -> Result<LocalToRemote, io::Error> {
         let proto = parse_tunnel_arg(arg)?;
         let local_protocol = match proto.local_protocol {
-            LocalProtocol::Tcp { .. } => LocalProtocol::ReverseTcp {},
+            LocalProtocol::Tcp { proxy_protocol } => LocalProtocol::ReverseTcp { proxy_protocol },
             LocalProtocol::Udp { timeout } => LocalProtocol::ReverseUdp { timeout },
             LocalProtocol::Socks5 { timeout, credentials } => LocalProtocol::ReverseSocks5 { timeout, credentials },
             LocalProtocol::HttpProxy {
@@ -661,7 +661,7 @@ mod parsers {
                 proxy_protocol: _proxy_protocol,
             } => LocalProtocol::ReverseHttpProxy { timeout, credentials },
             LocalProtocol::Unix { path, .. } => LocalProtocol::ReverseUnix { path },
-            LocalProtocol::ReverseTcp
+            LocalProtocol::ReverseTcp { .. }
             | LocalProtocol::ReverseUdp { .. }
             | LocalProtocol::ReverseSocks5 { .. }
             | LocalProtocol::ReverseHttpProxy { .. }
@@ -747,7 +747,7 @@ mod parsers {
 
     #[cfg(test)]
     mod test {
-        use super::{LocalToRemote, parse_local_bind, parse_tunnel_arg, parse_tunnel_dest};
+        use super::{LocalToRemote, parse_local_bind, parse_reverse_tunnel_arg, parse_tunnel_arg, parse_tunnel_dest};
         use crate::tunnel::LocalProtocol;
         use collection_macros::btreemap;
         use std::collections::BTreeMap;
@@ -802,6 +802,24 @@ mod parsers {
         ; "with full ipv6 tunnel")]
         fn test_parse_tunnel_arg(input: &str) -> LocalToRemote {
             parse_tunnel_arg(input).unwrap()
+        }
+
+        #[test_case("tcp://443:domain.com:4443" =>
+            LocalToRemote {
+                local_protocol: LocalProtocol::ReverseTcp { proxy_protocol: false },
+                local: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 443)),
+                remote: (Host::Domain("domain.com".to_string()), 4443),
+            }
+        ; "reverse tcp without proxy_protocol")]
+        #[test_case("tcp://443:domain.com:4443?proxy_protocol" =>
+            LocalToRemote {
+                local_protocol: LocalProtocol::ReverseTcp { proxy_protocol: true },
+                local: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 443)),
+                remote: (Host::Domain("domain.com".to_string()), 4443),
+            }
+        ; "reverse tcp with proxy_protocol")]
+        fn test_parse_reverse_tunnel_arg(input: &str) -> LocalToRemote {
+            parse_reverse_tunnel_arg(input).unwrap()
         }
     }
 }

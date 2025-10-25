@@ -36,7 +36,9 @@ pub enum LocalProtocol {
         credentials: Option<(String, String)>,
         proxy_protocol: bool,
     },
-    ReverseTcp,
+    ReverseTcp {
+        proxy_protocol: bool,
+    },
     ReverseUdp {
         timeout: Option<Duration>,
     },
@@ -61,7 +63,7 @@ impl LocalProtocol {
     pub const fn is_reverse_tunnel(&self) -> bool {
         matches!(
             self,
-            Self::ReverseTcp
+            Self::ReverseTcp { .. }
                 | Self::ReverseUdp { .. }
                 | Self::ReverseSocks5 { .. }
                 | Self::ReverseUnix { .. }
@@ -72,6 +74,13 @@ impl LocalProtocol {
     pub const fn is_dynamic_reverse_tunnel(&self) -> bool {
         matches!(self, Self::ReverseSocks5 { .. } | Self::ReverseHttpProxy { .. })
     }
+
+    pub const fn needs_cookie_for_proxy_protocol(&self) -> bool {
+        matches!(
+            self,
+            Self::ReverseTcp { proxy_protocol: true } | Self::Tcp { proxy_protocol: true }
+        )
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -79,6 +88,10 @@ pub struct RemoteAddr {
     pub protocol: LocalProtocol,
     pub host: Host,
     pub port: u16,
+    pub src_host: Option<Host>,
+    pub src_port: Option<u16>,
+    pub dest_host: Option<Host>,
+    pub dest_port: Option<u16>,
 }
 
 pub fn to_host_port(addr: SocketAddr) -> (Host, u16) {
